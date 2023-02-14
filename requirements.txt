@@ -1,0 +1,7 @@
+pydriller==2.4
+pyhash==0.9.3
+numpy
+scipy
+pandas
+dateparser
+
