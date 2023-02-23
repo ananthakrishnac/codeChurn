@@ -4,4 +4,4 @@ numpy
 scipy
 pandas
 dateparser
-
+mysql-connector-python

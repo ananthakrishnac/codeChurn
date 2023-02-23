@@ -47,8 +47,25 @@ NOTES:
 v0.0.1
 
 1. Too slow - need to work on speeding up the process
-2. There are still some conflicts, not sure why
+2. There are still some conflicts, not sure why  -- v0.0.2: Kinda know, but dont know if that is all
 3. Need to do data visualization
 4. Need to improve logging.. the dumps are mostly developer dumps, need to clean them up.
 5. exdir and updateDB flags not functional
 6. I've tested only single author name, need to add list support.
+7. Add project name to argument
+8. Support MYSQL/SQLITE/JSON via interfaces
+9. Try to do Data processing as much as possible here, instead of data processing tool to speed up visualization
+10. 
+
+v0.0.2
+
+1. (v0.0.1: line 2) Data conflicts are when the same base git repo is pointed by different repo. Otherwise, things seem fine
+2. (v0.0.1: line 5) Moved it all to config.ini file
+3. (v0.0.1: line 6) Multiple authors supported
+4. (v0.0.1: line 7) Project Name added to argument and table
+5. (v0.0.1: line 8) MySQL, SQLite supported - JSON still TODO
+6. (v0.0.2:) You may be thinking why are so many redundant datafiels added in database. Reason: It is much easier (and faster) to just use the data and project, rather than calculate during Visualization
+7. (v0.0.2:) Can enable / disable individual DBs as needed
+8. (v0.0.2: NOTE - IMPORTANT) We cannot use mFile.nloc to compare git lines added/deleted. nloc strips all comments, blanks, etc and counts lines, whereas git added/deleted counts it all. Therefore it is not apples to apples comparison.
+9. (v0.0.2: NOTE - IMPORTANT) authorDate and commitDate can be different if commits are amended or merged, else they could be same/similar.
+
