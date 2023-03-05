@@ -15,7 +15,7 @@ import ast
 from DBObserverInterface import DBObserverInterface
 from SQLiteClassImpl import SQLiteDBImpl
 from MySqlClassImpl import MySqlDBImpl
-import json
+from JSONClassImpl import JSONImpl
 
 
 # For enabling logs, toggle the below lines
@@ -150,6 +150,13 @@ def main():
         #dbname = str(projectarg)+str(configini['MySql']['DBname'])
         dbname = str(configini['MySql']['DBname'])
         dbObject.attach(MySqlDBImpl(name=dbname, project=str(projectarg), user=configini['MySql']['user'], password=configini['MySql']['password'], host=configini['MySql']['host']))
+
+    if configini.getboolean("JSON", 'enableJSON') == True:
+        dbname = str(projectarg)
+        dbObject.attach(JSONImpl(name=dbname, authorfile=configini['JSON']['authorfile'], \
+                        commitfile=configini['JSON']['commitsfile'], renamefiles=configini['JSON']['renamesfile'], \
+                            files=configini['JSON']['filesfile'], filechurn=configini['JSON']['churnfile']))
+        
 
     dbObject.createDB()
     
@@ -367,6 +374,7 @@ def parseGitStructureForAllDirs(after, before, author, baseDir, dirs, excludeDir
 
 
         dbObject.DBCommitTransaction()
+    dbObject.DBFinalize()
     return
 
 

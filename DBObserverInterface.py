@@ -29,6 +29,10 @@ class DBObserverInterface:
             observer.commitTransaction()
         
             
+    def DBFinalize(self):
+        for observer in self._observers:
+            observer.finalize()
+            
     def insertAuthors(self, name, hashValue):
         for observer in self._observers:
             observer.insertAuthors(name, hashValue)

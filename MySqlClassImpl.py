@@ -154,3 +154,5 @@ class MySqlDBImpl:
         return
     
         
+    def finalize(self):
+        pass

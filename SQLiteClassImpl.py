@@ -113,3 +113,5 @@ class SQLiteDBImpl:
             raise
         return
     
+    def finalize(self):
+        pass
