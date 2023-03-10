@@ -43,6 +43,8 @@ https://github.com/ishepard/pydriller
 
 
 NOTES: 
+v0.0.4:
+1. Implemented multiprocessing to speed up parsing. - Will need to change implementation to make best use of all available cores.
 
 v0.0.3:
 1. (v0.0.2: line 5) Added support for JSON
