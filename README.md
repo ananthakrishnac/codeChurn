@@ -43,6 +43,11 @@ https://github.com/ishepard/pydriller
 
 
 NOTES: 
+
+v0.0.5:
+1. Revert v0.0.4 -- has issues when working with MySql. But need to implement Multithreading to reducing parsing time from minutes to subminute.
+2. Added Json Support
+
 v0.0.4:
 1. Implemented multiprocessing to speed up parsing. - Will need to change implementation to make best use of all available cores.
 

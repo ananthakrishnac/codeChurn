@@ -16,10 +16,6 @@ from DBObserverInterface import DBObserverInterface
 from SQLiteClassImpl import SQLiteDBImpl
 from MySqlClassImpl import MySqlDBImpl
 from JSONClassImpl import JSONImpl
-import time
-from threading import Thread
-import multiprocessing
-from multiprocessing import Pool
 
 
 # For enabling logs, toggle the below lines
@@ -34,7 +30,6 @@ authorDict = {}
 fileDict = {}
 commitDict = {}
 
-timeSaves = []
 
 # Bits and ppieces of this code has been picked up from gitcodechurn.py file by Francis LaclA, released under MIT license
 # (https://github.com/flacle/truegitcodechurn)
@@ -242,16 +237,33 @@ def removegitmodules(startdir):
         os.rename(item, item+"--old")
     return
 
-def parseAndProcess(dirP, after, before, author, baseDir, dirs, excludeDirs, dbObject):
+def parseGitStructureForAllDirs(after, before, author, baseDir, dirs, excludeDirs, dbObject):
 
-        tv_start = time.perf_counter()
+    # Navigate the entire repos.. i.e. list of all git repositories.
+    # One way to "probably" get around the relative path problem is to change working dir and use that path from corresponding git repo
+    # but, if there exists foldernames / path with same names, then there is a possbility of hash value clash.
+
+    ## TODO: Need to rework on folder logic.
+    #os.chdir(baseDir)
+    #cwdPath, cwd = os.path.split(os.getcwd())
+    #print(cwd)
+
+    #cur = dbCon.cursor()
+
+    for dirP in dirs:
+        print(dirP)
+
+        exclude = False        
+        for exdir in excludeDirs:
+            if str(dirP).find(exdir) != -1: 
+                exclude = True
+        if exclude == True:
+            continue
+        
         dbObject.DBBeginTransaction()
         
-        count = 0
-        argListCommits = []
-        # print("-----> " + str(dirP) + " Commits Total: "  + str(git.Git(dirP).total_commits()))
         for commit in git.Repository(str(dirP), since = after, to = before, only_authors=author).traverse_commits():
-            count = count + 1
+
             if DEBUG == True:
                 #https://pydriller.readthedocs.io/en/latest/commit.html
                 print(commit.hash, commit.author.name, commit.committer_date, commit.files, commit.lines, commit.insertions, commit.deletions)
@@ -362,54 +374,7 @@ def parseAndProcess(dirP, after, before, author, baseDir, dirs, excludeDirs, dbO
 
 
         dbObject.DBCommitTransaction()
-        tv_end = time.perf_counter()
-        timeSaves.append({"dir":str(dirP), "time":tv_end - tv_start})
-        print("dirP: " + str(dirP) + " time: " + str(tv_end - tv_start) + " Total Commits: " + str(count))
-        return
-
-def parseGitStructureForAllDirs(after, before, author, baseDir, dirs, excludeDirs, dbObject):
-
-    # Navigate the entire repos.. i.e. list of all git repositories.
-    # One way to "probably" get around the relative path problem is to change working dir and use that path from corresponding git repo
-    # but, if there exists foldernames / path with same names, then there is a possbility of hash value clash.
-
-    ## TODO: Need to rework on folder logic.
-    #os.chdir(baseDir)
-    #cwdPath, cwd = os.path.split(os.getcwd())
-    #print(cwd)
-
-    #cur = dbCon.cursor()
-
-    #timeSaves = []
-    dirThreads = []
-    countOfDirs = len(dirs)
-    argList = []
-    pool = Pool(processes=multiprocessing.cpu_count()) #countOfDirs
-       
-    for dirP in dirs:
-        print(dirP)
-        
-        exclude = False        
-        for exdir in excludeDirs:
-            if str(dirP).find(exdir) != -1: 
-                exclude = True
-        if exclude == True:
-            continue
-        
-       
-        # tv_start = time.perf_counter()       
-        # tv_end = time.perf_counter()
-        # timeSaves.append({"dir":str(dirP), "time":tv_end - tv_start})
-        argList.append((dirP, after, before, author, baseDir, dirs, excludeDirs, dbObject))
-   
-    result = pool.starmap(parseAndProcess, argList)
-        
     dbObject.DBFinalize()
-    
-    pool.close()
-    pool.join()
-    
-    print(timeSaves)
     return
 
 

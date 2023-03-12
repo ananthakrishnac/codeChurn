@@ -5,3 +5,8 @@ scipy
 pandas
 dateparser
 mysql-connector-python
+multithreading
+logger
+loguru
+requests
+xxhash
