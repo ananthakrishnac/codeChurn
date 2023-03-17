@@ -50,6 +50,6 @@ class DBObserverInterface:
         for observer in self._observers:
             observer.insertRenames(commitHash, oldPathHash, newPathHash)
     
-    def insertFileChurn(self, commitHash, filePathHash, added_lines, deleted_lines, nloc, complexity, filename, date, authorName):
+    def insertFileChurn(self, commitHash, filePathHash, changeType, added_lines, deleted_lines, nloc, complexity, filename, date, authorName):
         for observer in self._observers:
-            observer.insertFileChurn(commitHash, filePathHash, added_lines, deleted_lines, nloc, complexity, filename, date, authorName)
+            observer.insertFileChurn(commitHash, filePathHash, changeType, added_lines, deleted_lines, nloc, complexity, filename, date, authorName)

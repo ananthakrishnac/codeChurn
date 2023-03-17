@@ -36,6 +36,7 @@ class SQLiteDBImpl:
         cur.execute("CREATE TABLE IF NOT EXISTS FILENAMES(filename STRING ASC, fileHashVal NUMERIC NOT NULL PRIMARY KEY)")
         cur.execute("CREATE TABLE IF NOT EXISTS RENAMEDFILES(commitHash NUMERIC, oldfilePathHash NUMERIC, newfilePathHash NUMERIC)")
         cur.execute("CREATE TABLE IF NOT EXISTS FILECHURN(commitHash NUMERIC, filehashVal NUMERIC, \
+                          changeType STRING, \
                           countAddedLines INTEGER, countDeletedLines INTEGER, \
                           countFileLOC INTEGER, \
                           fileComplexity INTEGER, \
@@ -71,7 +72,7 @@ class SQLiteDBImpl:
     def insertCommits(self, commitHash, commitID, authorHash, authorName, filesCount, insertionsCount, deletionsCount, committer_date, dirP):
         cur = self._connection_.cursor()
         try:
-            cur.execute("INSERT INTO COMMITS VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
+            cur.execute("INSERT OR IGNORE INTO COMMITS VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
                             (commitHash, commitID, authorHash, authorName, filesCount, insertionsCount, deletionsCount, -1 * deletionsCount, insertionsCount - deletionsCount, insertionsCount + deletionsCount ,committer_date, dirP, re.split(r'[:|\\|\| |/|,]',dirP)[-1]))
         except Exception as e:
             print("SQLite: could not insert commits: " ,
@@ -85,7 +86,7 @@ class SQLiteDBImpl:
     def insertRenames(self, commitHash, oldPathHash, newPathHash):
         cur = self._connection_.cursor()
         try:
-            cur.execute("INSERT INTO RENAMEDFILES VALUES (?, ?, ?)", ( commitHash, oldPathHash, newPathHash) )
+            cur.execute("INSERT OR IGNORE INTO RENAMEDFILES VALUES (?, ?, ?)", ( commitHash, oldPathHash, newPathHash) )
         except Exception as e:
             print("SQLite: could not insert renames: ", commitHash, oldPathHash, newPathHash)
             print({e})
@@ -96,19 +97,19 @@ class SQLiteDBImpl:
     def insertFiles(self, filePath, filePathHash):
         cur = self._connection_.cursor()
         try:
-            cur.execute("INSERT INTO FILENAMES VALUES (?, ?)", (filePath, filePathHash))
+            cur.execute("INSERT OR IGNORE INTO FILENAMES VALUES (?, ?)", (filePath, filePathHash))
         except Exception as e:
             print("SQLite: could not insert files: ", filePath, filePathHash)
             print({e})
             raise
         return
             
-    def insertFileChurn(self, commitHash, filePathHash, added_lines, deleted_lines, nloc, complexity, filename, date, authorName):
+    def insertFileChurn(self, commitHash, filePathHash, changeType, added_lines, deleted_lines, nloc, complexity, filename, date, authorName):
         cur = self._connection_.cursor()
         try:
-            cur.execute("INSERT INTO FILECHURN VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (commitHash, filePathHash, added_lines, deleted_lines, nloc, complexity, filename, re.split(r'[:|\\|\| |/|,]',filename)[-1], date, -1 * deleted_lines, added_lines - deleted_lines, added_lines + deleted_lines, authorName))
+            cur.execute("INSERT OR IGNORE INTO FILECHURN VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (commitHash, filePathHash, changeType, added_lines, deleted_lines, nloc, complexity, filename, re.split(r'[:|\\|\| |/|,]',filename)[-1], date, -1 * deleted_lines, added_lines - deleted_lines, added_lines + deleted_lines, authorName))
         except Exception as e:
-            print("SQLite: could not insert filechurn: ", commitHash, filePathHash, added_lines, deleted_lines, nloc, complexity, filename, re.split(r'[:|\\|\| |/|,]',filename)[-1], date, -1 * deleted_lines, added_lines - deleted_lines, added_lines + deleted_lines, authorName)
+            print("SQLite: could not insert filechurn: ", commitHash, filePathHash, changeType, added_lines, deleted_lines, nloc, complexity, filename, re.split(r'[:|\\|\| |/|,]',filename)[-1], date, -1 * deleted_lines, added_lines - deleted_lines, added_lines + deleted_lines, authorName)
             print({e})
             raise
         return

@@ -73,8 +73,8 @@ class JSONImpl:
         self.jsonDictFilenames.append(files)
         return
             
-    def insertFileChurn(self, commitHash, filePathHash, added_lines, deleted_lines, nloc, complexity, filename, date, authorName):
-        churn = {"commitHash" : commitHash, "filehashVal" : filePathHash, "countAddedLines" : added_lines, "countDeletedLines" : deleted_lines, 
+    def insertFileChurn(self, commitHash, filePathHash, changeType, added_lines, deleted_lines, nloc, complexity, filename, date, authorName):
+        churn = {"commitHash" : commitHash, "filehashVal" : filePathHash, "changeType" : changeType, "countAddedLines" : added_lines, "countDeletedLines" : deleted_lines, 
                  "countFileLOC" : nloc, "fileComplexity" : complexity, "filenamePath" : filename, "filename" : re.split(r'[:|\\|\| |/|,]',filename)[-1], 
                  "date" : date.isoformat(), "countDeletedLinesNeg" : -1 * deleted_lines, "countNewlyAdded" : added_lines - deleted_lines, "countChurn" : added_lines + deleted_lines, "authorName" : authorName}
         self.jsonDictfilechurn.append(churn)

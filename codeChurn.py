@@ -262,8 +262,12 @@ def parseGitStructureForAllDirs(after, before, author, baseDir, dirs, excludeDir
         
         dbObject.DBBeginTransaction()
         
-        for commit in git.Repository(str(dirP), since = after, to = before, only_authors=author).traverse_commits():
+        #print(str(dirP))
+        for commit in git.Repository(str(dirP), since = after, to = before, only_authors=author, num_workers=1).traverse_commits():
 
+            #print(commit.hash)
+            #continue
+            
             if DEBUG == True:
                 #https://pydriller.readthedocs.io/en/latest/commit.html
                 print(commit.hash, commit.author.name, commit.committer_date, commit.files, commit.lines, commit.insertions, commit.deletions)
@@ -309,68 +313,84 @@ def parseGitStructureForAllDirs(after, before, author, baseDir, dirs, excludeDir
                 # But in any case, I've checked the case which i've seen. If any of you see this in field, DO NOT IGNORE. Verify it (and if possible, provide a solution)
 
 
-            
-            for mFile in commit.modified_files:
-                #if DEBUG == True:
-                    #https://pydriller.readthedocs.io/en/latest/modifiedfile.html#modifiedfile-toplevel
-                #    print(mFile.old_path, mFile.new_path, mFile.filename,mFile.change_type.name, mFile.added_lines, mFile.deleted_lines, mFile.nloc, mFile.complexity)
-            
-                # TODO: INSTEAD of hardcoding MODIFY/ADD/DELETE/RENAME, move it to a different structure and refer them from pydriller
-                # Cases:
-                # No change in file:
-                if mFile.change_type.name == "MODIFY":
-                    filePath = mFile.old_path
-                    
-
-                # File added:
-                if mFile.change_type.name == "ADD":
-                    filePath = mFile.new_path
-                    
-
-                # File deleted:
-                if mFile.change_type.name == "DELETE":
-                    filePath = mFile.old_path
-                    
-
-                # File renamed / moved:
-                if mFile.change_type.name == "RENAME":
-                    filePath = mFile.new_path
-                    dbObject.insertRenames(commitHash, xxhash.xxh32(mFile.old_path).intdigest(), xxhash.xxh32(mFile.new_path).intdigest())
-                    
-                if mFile.change_type == "COPY" or mFile.change_type == "UNKNOWN":
-                    print("WARNING::: Ignoring unknown type:", mFile.change_type, " FILE: OLD, new", mFile.old_path, mFile.new_path)
-                    continue
-
-                filePathHash = xxhash.xxh32(filePath).intdigest()
-                if(filePathHash in fileDict and fileDict[filePathHash] == filePath):
-                    pass
-                else:
-                    fileDict[filePathHash] = filePath
-                    try:
-                        dbObject.insertFiles(filePath, filePathHash)
-                    except:
-                        print("ERROR::: COULD NOT INSERT FILENAMES - Dumping file data ------------------ ")
-                        print(fileDict)
-                        print(filePath, filePathHash, mFile.change_type.name)
-                        print("------------------------------------------------------------------------- ")
+            try:
+                for mFile in commit.modified_files:
+                    #if DEBUG == True:
+                        #https://pydriller.readthedocs.io/en/latest/modifiedfile.html#modifiedfile-toplevel
+                    #    print(mFile.old_path, mFile.new_path, mFile.filename,mFile.change_type.name, mFile.added_lines, mFile.deleted_lines, mFile.nloc, mFile.complexity)
                 
-
-                # nloc = int(subprocess.check_output("wc -l " + filePath).split()[0]) # mFile.nloc
-                nloc = mFile.nloc
-                complexity = mFile.complexity
-
-                try:
-                    if (nloc == None):
-                        nloc = 0
-                    if (complexity == None):
-                        complexity = -1
-                    dbObject.insertFileChurn(commitHash, filePathHash, mFile.added_lines, mFile.deleted_lines, nloc, complexity, filePath, commit.committer_date ,str(commit.author.name))
-                    #https://stackoverflow.com/questions/11856983/why-is-git-authordate-different-from-commitdate
-                    #print(commitHash, filePathHash, mFile.added_lines, mFile.deleted_lines, nloc, mFile.complexity, filePath, commit.committer_date, commit.author_date ,str(commit.author.name))
-                except:
-                    print("ERROR::: COULD NOT INSERT FILECHURN - Dumping filechurn data ------------------ ")
-                    print(commitHash, filePathHash, mFile.added_lines, mFile.deleted_lines, nloc, mFile.complexity, filePath, commit.committer_date ,str(commit.author.name))
-                    print("------------------------------------------------------------------------- ")
+                    # TODO: INSTEAD of hardcoding MODIFY/ADD/DELETE/RENAME, move it to a different structure and refer them from pydriller
+                    # Cases:
+                    # No change in file:
+                    if mFile.change_type.name == "MODIFY":
+                        filePath = mFile.old_path
+                        
+    
+                    # File added / copied to new location:
+                    if mFile.change_type.name == "ADD" or mFile.change_type.name == "COPY":
+                        filePath = mFile.new_path
+                        
+    
+                    # File deleted:
+                    if mFile.change_type.name == "DELETE":
+                        filePath = mFile.old_path
+                        
+    
+                    # File renamed / moved:
+                    if mFile.change_type.name == "RENAME":
+                        filePath = mFile.new_path
+                        dbObject.insertRenames(commitHash, xxhash.xxh32(mFile.old_path).intdigest(), xxhash.xxh32(mFile.new_path).intdigest())
+                        
+                    if mFile.change_type.name == "UNKNOWN":
+                        #print("WARNING::: Ignoring unknown type:", mFile.change_type, " FILE: OLD, new", mFile.old_path, mFile.new_path)
+                        if mFile.new_path is not None:
+                            filePath = mFile.new_path
+                        elif mFile.old_path is not None:
+                            filePath = mFile.old_path
+                        else:
+                            print("WARNING::: Ignoring unknown type:", mFile.change_type, " FILE: OLD, new", mFile.old_path, mFile.new_path)
+                            continue
+                    
+                    if not (mFile.change_type.name == "MODIFY" or mFile.change_type.name == "ADD" or \
+                            mFile.change_type.name == "DELETE" or mFile.change_type.name == "RENAME" or \
+                            mFile.change_type.name == "COPY" or mFile.change_type.name == "UNKNOWN"):
+                        print("WARNING::: Ignoring not recognized type:", mFile.change_type, " FILE: OLD, new", mFile.old_path, mFile.new_path)
+                        continue
+                    
+    
+                    filePathHash = xxhash.xxh32(filePath).intdigest()
+                    if(filePathHash in fileDict and fileDict[filePathHash] == filePath):
+                        pass
+                    else:
+                        fileDict[filePathHash] = filePath
+                        try:
+                            dbObject.insertFiles(filePath, filePathHash)
+                        except:
+                            print("ERROR::: COULD NOT INSERT FILENAMES - Dumping file data ------------------ ")
+                            print(fileDict)
+                            print(filePath, filePathHash, mFile.change_type.name)
+                            print("------------------------------------------------------------------------- ")
+                    
+    
+                    # nloc = int(subprocess.check_output("wc -l " + filePath).split()[0]) # mFile.nloc
+                    nloc = mFile.nloc
+                    complexity = mFile.complexity
+    
+                    try:
+                        if (nloc == None):
+                            nloc = 0
+                        if (complexity == None):
+                            complexity = -1
+                        dbObject.insertFileChurn(commitHash, filePathHash, mFile.change_type.name, mFile.added_lines, mFile.deleted_lines, nloc, complexity, filePath, commit.committer_date ,str(commit.author.name))
+                        #https://stackoverflow.com/questions/11856983/why-is-git-authordate-different-from-commitdate
+                        #print(commitHash, filePathHash, mFile.added_lines, mFile.deleted_lines, nloc, mFile.complexity, filePath, commit.committer_date, commit.author_date ,str(commit.author.name))
+                    except:
+                        print("ERROR::: COULD NOT INSERT FILECHURN - Dumping filechurn data ------------------ ")
+                        print(commitHash, filePathHash, mFile.added_lines, mFile.deleted_lines, nloc, mFile.complexity, filePath, commit.committer_date ,str(commit.author.name))
+                        print("------------------------------------------------------------------------- ")
+            except Exception as e:
+                print("ERROR::: while looping through modified files ------------------ ")
+                print({e})
 
 
         dbObject.DBCommitTransaction()
