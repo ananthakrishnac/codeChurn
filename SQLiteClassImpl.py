@@ -2,6 +2,7 @@ import DBObserverInterface
 import os
 import sqlite3
 import re
+from datetime import datetime
 
 class SQLiteDBImpl:
     
@@ -12,7 +13,8 @@ class SQLiteDBImpl:
     
     def __init__(self, name='default'):
         self._name_ = name
-        self._dbname_ = self._name_ + self.db_postfix
+        dt_string = datetime.now().strftime("_%Y_%m_%d_%H_%M")
+        self._dbname_ = self._name_ + dt_string + self.db_postfix
     
     def name(self):
         return self._dbname_

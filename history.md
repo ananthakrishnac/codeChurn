@@ -1,5 +1,8 @@
 NOTES: 
 
+v0.0.8:
+1. Added datetime at the end of JSON and sqlite DBs so that they do not override older files.
+
 v0.0.7:
 1. Added support for multiple directories
 

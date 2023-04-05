@@ -1,7 +1,7 @@
 import json
 import os
 import re
-import datetime
+from datetime import datetime
 
 class JSONImpl:
     
@@ -17,12 +17,13 @@ class JSONImpl:
     
     def __init__(self, name='default', authorfile='authors', commitfile='commits', renamefiles='renames', files='files', filechurn='churn'):
         self._name_ = name
-        self._dbname_ = self._name_ + self.db_postfix
-        self._authorfile_ = self._name_+"_"+authorfile+self.db_postfix
-        self._commitfile_ = self._name_+"_"+commitfile+self.db_postfix
-        self._renamefile_ = self._name_+"_"+renamefiles+self.db_postfix
-        self._filesfile_ = self._name_+"_"+files+self.db_postfix
-        self._filechurnfile_ = self._name_+"_"+filechurn+self.db_postfix
+        dt_string = datetime.now().strftime("_%Y_%m_%d_%H_%M")
+        self._dbname_ = self._name_ +dt_string+ self.db_postfix
+        self._authorfile_ = self._name_+"_"+authorfile+dt_string+self.db_postfix
+        self._commitfile_ = self._name_+"_"+commitfile+dt_string+self.db_postfix
+        self._renamefile_ = self._name_+"_"+renamefiles+dt_string+self.db_postfix
+        self._filesfile_ = self._name_+"_"+files+dt_string+self.db_postfix
+        self._filechurnfile_ = self._name_+"_"+filechurn+dt_string+self.db_postfix
     
     def name(self):
         return self._dbname_
