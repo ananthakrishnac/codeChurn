@@ -1,5 +1,8 @@
 NOTES: 
 
+v0.0.7:
+1. Added support for multiple directories
+
 v0.0.6:
 Any sane developer will question what is happening and why so many redundant fields in SQLs.
 1. To speed up PowerBI/Tableau/... data data fetch and visualization. Instead of trying to compute data, if it is already present, reading makes it simple

@@ -100,13 +100,13 @@ def main():
         print(sections)
     
     projectarg = configini['args']['project']
-    pathArg    = configini['args']['dir']
+    pathArg    = ast.literal_eval(configini['args']['dir'])
     afterArg   = configini['args']['after']
     beforeArg  = configini['args']['before']
     authorArg  = ast.literal_eval(configini['args']['author'])
     exdirArg   = ast.literal_eval(configini['args']['exgitrepo'])
 
-    if not pathArg or pathArg == "":
+    if not pathArg or pathArg == "" or len(pathArg) == 0:
         return;
 
     # for the positionals we remove the prefixes
@@ -125,12 +125,13 @@ def main():
         before  = remove_prefix(beforeArg, 'before=')
         beforeDate = dateparser.parse(beforeArg) #.date()
     
-    dirPath = remove_prefix(pathArg, 'dir=')
-    
     exDirPath = exdirArg
+    
+    #dirPath = remove_prefix(pathArg, 'dir=') 
+    dirPath = pathArg
 
-    if DEBUG == True:
-        print(after,before,author,dir_path(dirPath))
+    #if DEBUG == True:
+        #print(after,before,author,dir_path(dirPath))
         #print(getAllGITDirectories(dirPath))
 
     dirs = getAllGITDirectories(dirPath)
@@ -188,7 +189,7 @@ def get_proc_out(command, dir):
     return process.communicate()[0].decode("utf-8")
 
 
-def getAllGITDirectories(startdir):
+def getAllGITDirectories(startdirs):
     ''' getAllGITDirectories: recurse from the given startdir and fetch path for all internal git directories
                          useful in repo analysis. Repo is usually collection of git repos, instead of
                          giving individual paths, this code fetches all git repos from the start path
@@ -211,30 +212,34 @@ def getAllGITDirectories(startdir):
     #return (["..\project_name"])        ## DELETE THIS
     ##########
     
-    command = 'find ' + startdir + ' -name .git -prune'
-    results = get_proc_out(command, os.getcwd()).splitlines()
-    if DEBUG == True:
-        print ("GIT REPOS: \n")
-        print (results)
-    
-    #for dirpath, dirnames, _ in os.walk(startdir, topdown=False):
-    for dirpath in results:
-        dirnames = os.listdir(dirpath)
-        if Path(dirpath).parts[-1] == ".git" and set(['info', 'objects', 'refs']).issubset(set(dirnames)):
-            pPath = Path(dirpath)
-            #print(pPath.parent.absolute())         # Absolute path
-            if DEBUG == True:
-                print(pPath.parent.absolute())         # Absolute path
-                print(pPath.parent.relative_to('.'))    # Relative path, this should be sufficient
-            dirs.append(pPath.parent.relative_to('.'))
+    for startdir in startdirs:
+        command = 'find ' + str(startdir) + ' -name .git -prune'
+        results = get_proc_out(command, os.getcwd()).splitlines()
+        if DEBUG == True:
+            print ("GIT REPOS: \n")
+            print (results)
+        
+        #for dirpath, dirnames, _ in os.walk(startdir, topdown=False):
+        for dirpath in results:
+            dirnames = os.listdir(dirpath)
+            if Path(dirpath).parts[-1] == ".git" and set(['info', 'objects', 'refs']).issubset(set(dirnames)):
+                pPath = Path(dirpath)
+                #print(pPath.parent.absolute())         # Absolute path
+                if DEBUG == True:
+                    print(pPath.parent.absolute())         # Absolute path
+                    print(pPath.parent.relative_to('.'))    # Relative path, this should be sufficient
+                dirs.append(pPath.parent.relative_to('.'))
+
+    # print(dirs)                
     return dirs
 
-def removegitmodules(startdir):
-    command = 'find ' + startdir + ' -name .gitmodules -prune'
-    results = get_proc_out(command, os.getcwd()).splitlines()
-    print("GIT MODULES::: ",results)
-    for item in results:
-        os.rename(item, item+"--old")
+def removegitmodules(startdirs):
+    for startdir in startdirs:
+        command = 'find ' + startdir + ' -name .gitmodules -prune'
+        results = get_proc_out(command, os.getcwd()).splitlines()
+        print("GIT MODULES::: ",results)
+        for item in results:
+            os.rename(item, item+"--old")
     return
 
 def parseGitStructureForAllDirs(after, before, author, baseDir, dirs, excludeDirs, dbObject):
