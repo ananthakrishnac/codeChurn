@@ -105,6 +105,7 @@ def main():
     beforeArg  = configini['args']['before']
     authorArg  = ast.literal_eval(configini['args']['author'])
     exdirArg   = ast.literal_eval(configini['args']['exgitrepo'])
+    exCommitsArg = ast.literal_eval(configini['args']['exCommits'])
 
     if not pathArg or pathArg == "" or len(pathArg) == 0:
         return;
@@ -161,7 +162,7 @@ def main():
 
     dbObject.createDB()
     
-    commits = parseGitStructureForAllDirs(afterDate, beforeDate, author, dirPath, dirs, exDirPath, dbObject)
+    commits = parseGitStructureForAllDirs(afterDate, beforeDate, author, dirPath, dirs, exDirPath, exCommitsArg, dbObject)
 
     return
 
@@ -242,7 +243,7 @@ def removegitmodules(startdirs):
             os.rename(item, item+"--old")
     return
 
-def parseGitStructureForAllDirs(after, before, author, baseDir, dirs, excludeDirs, dbObject):
+def parseGitStructureForAllDirs(after, before, author, baseDir, dirs, excludeDirs, exCommitsArg, dbObject):
 
     # Navigate the entire repos.. i.e. list of all git repositories.
     # One way to "probably" get around the relative path problem is to change working dir and use that path from corresponding git repo
@@ -272,6 +273,13 @@ def parseGitStructureForAllDirs(after, before, author, baseDir, dirs, excludeDir
 
             #print(commit.hash)
             #continue
+            
+            excludeCommit = False        
+            for exCommit in exCommitsArg:
+                if str(commit.hash).startswith(exCommit) == True or str(commit.hash) == exCommit: 
+                    excludeCommit = True
+            if excludeCommit == True:
+                continue
             
             if DEBUG == True:
                 #https://pydriller.readthedocs.io/en/latest/commit.html
