@@ -29,6 +29,7 @@ fileExists = False
 authorDict = {}
 fileDict = {}
 commitDict = {}
+nameAliasDict = {}
 
 
 # Bits and ppieces of this code has been picked up from gitcodechurn.py file by Francis LaclA, released under MIT license
@@ -76,7 +77,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         description = 'Compute true git code churn to understand tech debt.',
-        usage       = 'python codechurn.py -config=config.ini',
+        usage       = 'python codechurn.py -config=config.ini [-aliasnames=dbnamesalias.ini]',
         epilog      = ''
     )
     parser.add_argument(
@@ -87,6 +88,14 @@ def main():
         help = 'config.ini file describing required parameters'
     )
 
+    parser.add_argument(
+        '-aliasnames',
+        metavar='',
+        default='dbnamesalias.ini',
+        type = str,
+        help = 'config.ini file describing name aliases'
+    )
+
     args = parser.parse_args()
     configFile=''
     
@@ -94,8 +103,15 @@ def main():
     if configArg : 
         configFile  = remove_prefix(configArg, 'config=')
         
+    aliasNamesArg = args.aliasnames
+    aliasFile = ''
+    if aliasNamesArg:
+        aliasFile = remove_prefix(aliasNamesArg, 'aliasnames=')
+
     configini = configparser.ConfigParser()
-    configini.read(configFile)
+    configini.optionxform = str                    #https://stackoverflow.com/questions/19359556/configparser-reads-capital-keys-and-make-them-lower-case
+    configini.read([configFile, aliasFile])
+
     for sections in configini.sections():
         print(sections)
     
@@ -135,6 +151,11 @@ def main():
         #print(after,before,author,dir_path(dirPath))
         #print(getAllGITDirectories(dirPath))
 
+    if configini.has_section('namealias'):
+        for item in configini.items('namealias'):
+            print(repr(item[0]))
+            nameAliasDict[xxhash.xxh32(item[0].strip()).intdigest()] = item[1].strip()
+
     dirs = getAllGITDirectories(dirPath)
 
     #NOTE: If there are .gitmodules present, then python git crashes for unknown reasons. Hence just remove the .gitmodules for now.. I dont have time to investigate this at the moment.
@@ -143,14 +164,14 @@ def main():
     dbObject = DBObserverInterface()
     
     if configini.getboolean('SQLite','enableSqlite') == True:
-        dbname = str(projectarg)+str(configini['SQLite']['DBname'])
+        dbname = str(projectarg)+str(configini['SQLite']['DBName'])
         dbObject.attach(SQLiteDBImpl(dbname))
     
     if configini.getboolean('MySql','enableMySql') == True:
         # The below comment enables naming mysql table as ProjectNameTableName. This helps in separating tables. But if doing it on many projects, need indirect reference.
         # On the other hand, for the moment, I'm adding new column which has project name - which may help separating projects.
         #dbname = str(projectarg)+str(configini['MySql']['DBname'])
-        dbname = str(configini['MySql']['DBname'])
+        dbname = str(configini['MySql']['DBName'])
         dbObject.attach(MySqlDBImpl(name=dbname, project=str(projectarg), user=configini['MySql']['user'], password=configini['MySql']['password'], host=configini['MySql']['host']))
 
     if configini.getboolean("JSON", 'enableJSON') == True:
@@ -162,7 +183,7 @@ def main():
 
     dbObject.createDB()
     
-    commits = parseGitStructureForAllDirs(afterDate, beforeDate, author, dirPath, dirs, exDirPath, exCommitsArg, dbObject)
+    commits = parseGitStructureForAllDirs(afterDate, beforeDate, author, dirPath, dirs, exDirPath, exCommitsArg, nameAliasDict, dbObject)
 
     return
 
@@ -243,7 +264,7 @@ def removegitmodules(startdirs):
             os.rename(item, item+"--old")
     return
 
-def parseGitStructureForAllDirs(after, before, author, baseDir, dirs, excludeDirs, exCommitsArg, dbObject):
+def parseGitStructureForAllDirs(after, before, author, baseDir, dirs, excludeDirs, exCommitsArg, nameAliasDict, dbObject):
 
     # Navigate the entire repos.. i.e. list of all git repositories.
     # One way to "probably" get around the relative path problem is to change working dir and use that path from corresponding git repo
@@ -285,7 +306,7 @@ def parseGitStructureForAllDirs(after, before, author, baseDir, dirs, excludeDir
                 #https://pydriller.readthedocs.io/en/latest/commit.html
                 print(commit.hash, commit.author.name, commit.committer_date, commit.files, commit.lines, commit.insertions, commit.deletions)
 
-            authorHash = xxhash.xxh32(commit.author.name).intdigest()
+            authorHash = xxhash.xxh32(str(commit.author.name).strip()).intdigest()
             #print(str(commit.author.name), authorHash)
 
             # TODO: If this is a rerun, we need to know the authorHash and other Hashes saved.
@@ -299,10 +320,14 @@ def parseGitStructureForAllDirs(after, before, author, baseDir, dirs, excludeDir
             else:
                 # We could have used INSERT OR IGNORE .. but I want it to fail if hash and name does not match.
                 # There is no sense in reading the values from DB and checking it. Maintaining a dictionary is faster
-                authorDict[authorHash] = commit.author.name
+                l_authorName = str(commit.author.name).strip()
+                if(xxhash.xxh32(l_authorName).intdigest() in nameAliasDict):
+                    l_authorName = nameAliasDict[xxhash.xxh32(l_authorName).intdigest()]
+                    print("Name matched: " + l_authorName)
+                authorDict[authorHash] = l_authorName
                 try:
                     # cur.execute("INSERT INTO AUTHORS VALUES (?,?)", (str(commit.author.name), authorHash))
-                    dbObject.insertAuthors(str(commit.author.name), authorHash)
+                    dbObject.insertAuthors(l_authorName, authorHash)
                 except Exception as e:
                     print({e})
                     print("ERROR::: COULD NOT INSERT AUTHOR - Dumping author data ------------------ ")
@@ -313,7 +338,10 @@ def parseGitStructureForAllDirs(after, before, author, baseDir, dirs, excludeDir
             commitHash = xxhash.xxh32(commit.hash).intdigest()
             commitDict[commitHash] = commit.hash
             try:
-                dbObject.insertCommits(commitHash, str(commit.hash), authorHash, str(commit.author.name), commit.files, commit.insertions, commit.deletions, commit.committer_date, str(dirP))
+                l_authorName = str(commit.author.name).strip()
+                if(xxhash.xxh32(str(commit.author.name).strip()).intdigest() in nameAliasDict):
+                    l_authorName = nameAliasDict[xxhash.xxh32(str(commit.author.name).strip()).intdigest()]
+                dbObject.insertCommits(commitHash, str(commit.hash), authorHash, l_authorName, commit.files, commit.insertions, commit.deletions, commit.committer_date, str(dirP))
 
             except:
                 print("ERROR::: COULD NOT INSERT COMMITS - Dumping commit data ------------------ ")

@@ -1,5 +1,8 @@
 NOTES: 
 
+v0.0.10:
+1. Added name aliases
+
 v0.0.9:
 1. Added commits to exclude if there is a need
 
